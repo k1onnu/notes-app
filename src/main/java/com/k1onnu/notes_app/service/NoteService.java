@@ -1,5 +1,6 @@
 package com.k1onnu.notes_app.service;
 
+import com.k1onnu.notes_app.dto.NotePatchRequest;
 import com.k1onnu.notes_app.dto.NoteRequest;
 import com.k1onnu.notes_app.dto.NoteResponse;
 import com.k1onnu.notes_app.model.Note;
@@ -33,8 +34,9 @@ public class NoteService {
         return mapToResponse(savedNote);
     }
 
-    public List<NoteResponse> getAllNotes() {
-        return noteRepository.findAll().stream().map(this::mapToResponse).collect(Collectors.toList());
+    public org.springframework.data.domain.Page<NoteResponse> getAllNotes(int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return noteRepository.findAll(pageable).map(this::mapToResponse);
     }
 
     public NoteResponse getNoteById(Long id) {
@@ -52,6 +54,16 @@ public class NoteService {
     public void deleteNote(Long id) {
         if (!noteRepository.existsById(id)) throw new RuntimeException("Заметка не найдена");
         noteRepository.deleteById(id);
+    }
+
+    public NoteResponse patchNote(Long id, NotePatchRequest request) {
+        Note note = noteRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Заметка не найдена"));
+
+        if (request.getTitle() != null) note.setTitle(request.getTitle());
+        if (request.getContent() != null) note.setContent(request.getContent());
+
+        return mapToResponse(noteRepository.save(note));
     }
 
     private NoteResponse mapToResponse(Note note) {

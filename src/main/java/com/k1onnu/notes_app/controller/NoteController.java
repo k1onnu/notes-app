@@ -1,5 +1,6 @@
 package com.k1onnu.notes_app.controller;
 
+import com.k1onnu.notes_app.dto.NotePatchRequest;
 import com.k1onnu.notes_app.dto.NoteRequest;
 import com.k1onnu.notes_app.dto.NoteResponse;
 import com.k1onnu.notes_app.service.NoteService;
@@ -24,8 +25,10 @@ public class NoteController {
     }
 
     @GetMapping
-    public List<NoteResponse> getAllNotes() {
-        return noteService.getAllNotes();
+    public org.springframework.data.domain.Page<NoteResponse> getAllNotes(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return noteService.getAllNotes(page, size);
     }
 
     @GetMapping("/{id}")
@@ -42,5 +45,10 @@ public class NoteController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteNote(@PathVariable Long id) {
         noteService.deleteNote(id);
+    }
+
+    @PatchMapping("/{id}")
+    public NoteResponse patchNote(@PathVariable Long id, @RequestBody NotePatchRequest request) {
+        return noteService.patchNote(id, request);
     }
 }
