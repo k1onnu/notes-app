@@ -1,7 +1,9 @@
 package com.k1onnu.notes_app.controller;
 
+import com.k1onnu.notes_app.dto.UserRequest;
 import com.k1onnu.notes_app.model.User;
 import com.k1onnu.notes_app.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -21,8 +23,8 @@ public class UserController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public User createUser(@RequestBody User user) {
-        return userService.createUser(user);
+    public User createUser(@Valid @RequestBody UserRequest request) {
+        return userService.createUser(request);
     }
 
     @GetMapping("/{id}")
