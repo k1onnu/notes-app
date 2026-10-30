@@ -1,22 +1,21 @@
 # Notes App
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Java-17-orange?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 17" />
-  <img src="https://img.shields.io/badge/Spring_Boot-3-6DB33F?style=for-the-badge&logo=spring&logoColor=white" alt="Spring Boot 3" />
-  <img src="https://img.shields.io/badge/Maven-C71A36?style=for-the-badge&logo=apache-maven&logoColor=white" alt="Maven" />
-  <img src="https://img.shields.io/badge/H2_Database-blue?style=for-the-badge" alt="H2 Database" />
-  <img src="https://img.shields.io/badge/Swagger-85EA2D?style=for-the-badge&logo=swagger&logoColor=black" alt="Swagger" />
-  <img src="https://img.shields.io/badge/Postman-FF6C37?style=for-the-badge&logo=postman&logoColor=white" alt="Postman" />
-</p>
+[![Java](https://img.shields.io/badge/Java-17+-ED8B00?style=flat&logo=openjdk&logoColor=white)](#)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4-6DB33F?style=flat&logo=spring-boot&logoColor=white)](#)
+[![Maven](https://img.shields.io/badge/Maven-3.9-C71A36?style=flat&logo=apache-maven&logoColor=white)](#)
+[![H2](https://img.shields.io/badge/H2_Database-2.x-4479A1?style=flat&logo=databricks&logoColor=white)](#)
+[![Swagger](https://img.shields.io/badge/Swagger-OpenAPI-85EA2D?style=flat&logo=swagger&logoColor=black)](#)
+[![Postman](https://img.shields.io/badge/Postman-Collection-FF6C37?style=flat&logo=postman&logoColor=white)](#)
+[![JUnit 5](https://img.shields.io/badge/JUnit_5-25A162?style=flat&logo=junit5&logoColor=white)](#)
 
 **Notes App** — клиент-серверное приложение для создания, хранения и совместного редактирования текстовых заметок. Пользователь может вести личные записи, а также предоставлять доступ к отдельным заметкам другим пользователям.
 
 ## Стек технологий
 * **Язык:** Java 17
-* **Фреймворк:** Spring Boot 3 (Spring Web, Spring Data JPA, Spring Security)
+* **Фреймворк:** Spring Boot 4 (Spring Web, Spring Data JPA, Spring Security)
 * **База данных:** H2 Database (файловый режим)
 * **Документация API:** Swagger UI (SpringDoc OpenAPI)
-* **Тестирование API:** Postman
+* **Тестирование:** Postman, JUnit 5, MockMvc
 * **Сборка:** Maven
 
 ## Как запустить проект
@@ -36,9 +35,9 @@
 
 * **H2 Console** (Веб-интерфейс базы данных):
   [http://localhost:8080/h2-console](http://localhost:8080/h2-console)
-    * **JDBC URL:** `jdbc:h2:file:./data/notesdb`
-    * **User Name:** `sa`
-    * **Password:** (оставить пустым)
+  * **JDBC URL:** `jdbc:h2:file:./data/notesdb`
+  * **User Name:** `sa`
+  * **Password:** (оставить пустым)
 
 ## Тестирование API
 В корне проекта находится файл `notes-app.postman_collection.json`.
@@ -50,6 +49,8 @@
 * Валидация входных данных (DTO).
 * Пагинация при получении списка заметок.
 * Проверка на существование записей перед обновлением/удалением.
+* Глобальная обработка ошибок (404, 409, 400).
+* Написаны Unit-тесты для проверки обработки ошибок (JUnit 5, MockMvc).
 
 ## Планы по развитию
 * Внедрение JWT-авторизации (регистрация и логин).
