@@ -3,7 +3,8 @@ package com.k1onnu.notes_app.service;
 import com.k1onnu.notes_app.dto.NotePatchRequest;
 import com.k1onnu.notes_app.dto.NoteRequest;
 import com.k1onnu.notes_app.dto.NoteResponse;
-import com.k1onnu.notes_app.exception.NotFoundException; // Добавлен импорт
+import com.k1onnu.notes_app.dto.UserStatsResponse;
+import com.k1onnu.notes_app.exception.NotFoundException;
 import com.k1onnu.notes_app.model.Note;
 import com.k1onnu.notes_app.model.User;
 import com.k1onnu.notes_app.repository.NoteRepository;
@@ -12,7 +13,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,9 +40,30 @@ public class NoteService {
         return mapToResponse(savedNote);
     }
 
-    public Page<NoteResponse> getAllNotes(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
+    // Обновленный метод с поиском и сортировкой
+    public Page<NoteResponse> getAllNotes(int page, int size, String search, String sortBy) {
+        Sort sort = Sort.by(sortBy);
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        if (search != null && !search.isEmpty()) {
+            return noteRepository.findByTitleContainingIgnoreCase(search, pageable).map(this::mapToResponse);
+        }
         return noteRepository.findAll(pageable).map(this::mapToResponse);
+    }
+
+    // Статистика: все юзеры и количество их заметок
+    public List<UserStatsResponse> getStats() {
+        return noteRepository.countNotesByUser().stream()
+                .map(obj -> new UserStatsResponse((String) obj[0], (Long) obj[1]))
+                .collect(Collectors.toList());
+    }
+
+    // Отчет Top-N
+    public List<UserStatsResponse> getTopUsers(int limit) {
+        Pageable pageable = PageRequest.of(0, limit);
+        return noteRepository.findTopUsers(pageable).stream()
+                .map(obj -> new UserStatsResponse((String) obj[0], (Long) obj[1]))
+                .collect(Collectors.toList());
     }
 
     public NoteResponse getNoteById(Long id) {

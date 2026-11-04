@@ -27,8 +27,20 @@ public class NoteController {
     @GetMapping
     public org.springframework.data.domain.Page<NoteResponse> getAllNotes(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        return noteService.getAllNotes(page, size);
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(defaultValue = "id") String sortBy) {
+        return noteService.getAllNotes(page, size, search, sortBy);
+    }
+
+    @GetMapping("/stats")
+    public List<com.k1onnu.notes_app.dto.UserStatsResponse> getStats() {
+        return noteService.getStats();
+    }
+
+    @GetMapping("/stats/top")
+    public List<com.k1onnu.notes_app.dto.UserStatsResponse> getTopUsers(@RequestParam(defaultValue = "3") int limit) {
+        return noteService.getTopUsers(limit);
     }
 
     @GetMapping("/{id}")
