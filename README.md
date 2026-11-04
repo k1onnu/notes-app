@@ -8,7 +8,8 @@
 [![Postman](https://img.shields.io/badge/Postman-Collection-FF6C37?style=flat&logo=postman&logoColor=white)](#)
 [![JUnit 5](https://img.shields.io/badge/JUnit_5-25A162?style=flat&logo=junit5&logoColor=white)](#)
 [![Mockito](https://img.shields.io/badge/Mockito-78A641?style=flat)](#)
-
+[![Java CI with Maven](https://github.com/k1onnu/notes-app/actions/workflows/maven.yml/badge.svg)](https://github.com/k1onnu/notes-app/actions/workflows/maven.yml)
+[![codecov](https://codecov.io/gh/k1onnu/notes-app/graph/badge.svg?token=0f986096-3f56-438a-b656-1b3581b57192)](https://codecov.io/gh/k1onnu/notes-app)
 **Notes App** — клиент-серверное приложение для создания, хранения и совместного редактирования текстовых заметок. Пользователь может вести личные записи, а также предоставлять доступ к отдельным заметкам другим пользователям.
 
 ## Стек технологий
