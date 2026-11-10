@@ -34,3 +34,6 @@ Thumbs.db
 data/
 *.mv.db
 *.trace.db
+
+# Maven Wrapper
+.mvn/wrapper/
