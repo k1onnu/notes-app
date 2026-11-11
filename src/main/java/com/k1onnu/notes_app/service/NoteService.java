@@ -41,12 +41,18 @@ public class NoteService {
     }
 
     // Обновленный метод с поиском и сортировкой
-    public Page<NoteResponse> getAllNotes(int page, int size, String search, String sortBy) {
+    public Page<NoteResponse> getAllNotes(int page, int size, String search, Long ownerId, String searchContent, String sortBy) {
         Sort sort = Sort.by(sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
 
         if (search != null && !search.isEmpty()) {
             return noteRepository.findByTitleContainingIgnoreCase(search, pageable).map(this::mapToResponse);
+        }
+        if (ownerId != null) {
+            return noteRepository.findByOwnerId(ownerId, pageable).map(this::mapToResponse);
+        }
+        if (searchContent != null && !searchContent.isEmpty()) {
+            return noteRepository.findByContentContainingIgnoreCase(searchContent, pageable).map(this::mapToResponse);
         }
         return noteRepository.findAll(pageable).map(this::mapToResponse);
     }

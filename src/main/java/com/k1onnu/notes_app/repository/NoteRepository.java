@@ -12,6 +12,8 @@ import java.util.List;
 @Repository
 public interface NoteRepository extends JpaRepository<Note, Long> {
     Page<Note> findByTitleContainingIgnoreCase(String title, Pageable pageable);
+    Page<Note> findByOwnerId(Long ownerId, Pageable pageable);
+    Page<Note> findByContentContainingIgnoreCase(String content, Pageable pageable);
 
     @Query("SELECT u.username, COUNT(n) FROM Note n JOIN n.owner u GROUP BY u.username")
     List<Object[]> countNotesByUser();
