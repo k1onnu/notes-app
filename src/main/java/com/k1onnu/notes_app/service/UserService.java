@@ -15,8 +15,9 @@ import java.util.List;
 public class UserService {
     private final UserRepository userRepository;
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public org.springframework.data.domain.Page<com.k1onnu.notes_app.dto.UserResponse> getAllUsers(int page, int size) {
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        return userRepository.findAll(pageable).map(this::mapToResponse);
     }
 
     public User createUser(UserRequest request) {
@@ -50,5 +51,14 @@ public class UserService {
             throw new NotFoundException("Пользователь с ID %d не найден".formatted(id));
         }
         userRepository.deleteById(id);
+    }
+
+    private com.k1onnu.notes_app.dto.UserResponse mapToResponse(User user) {
+        com.k1onnu.notes_app.dto.UserResponse response = new com.k1onnu.notes_app.dto.UserResponse();
+        response.setId(user.getId());
+        response.setUsername(user.getUsername());
+        response.setRole(user.getRole());
+        response.setCreatedAt(user.getCreatedAt());
+        return response;
     }
 }
