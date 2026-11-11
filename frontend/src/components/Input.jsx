@@ -2,16 +2,16 @@ import React from 'react';
 
 export const Input = ({ label, value, onChange, error, placeholder, type = 'text' }) => {
     return (
-        <div style={{ marginBottom: '15px' }}>
-            {label && <label style={{ display: 'block', marginBottom: '5px' }}>{label}</label>}
+        <div className="mb-3">
+            {label && <label className="form-label">{label}</label>}
             <input
                 type={type}
                 value={value}
                 onChange={onChange}
                 placeholder={placeholder}
-                style={{ width: '100%', padding: '8px', border: error ? '1px solid red' : '1px solid #ccc' }}
+                className={`form-control ${error ? 'is-invalid' : ''}`}
             />
-            {error && <span style={{ color: 'red', fontSize: '12px' }}>{error}</span>}
+            {error && <div className="invalid-feedback">{error}</div>}
         </div>
     );
 };

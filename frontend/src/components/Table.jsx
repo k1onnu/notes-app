@@ -2,17 +2,17 @@ import React from 'react';
 
 export const Table = ({ columns, data }) => {
     return (
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}>
-            <thead>
-                <tr style={{ borderBottom: '2px solid #ccc', textAlign: 'left' }}>
-                    {columns.map((col) => <th key={col.key} style={{ padding: '10px' }}>{col.title}</th>)}
+        <table className="table table-striped table-hover mt-3">
+            <thead className="table-dark">
+                <tr>
+                    {columns.map((col) => <th key={col.key}>{col.title}</th>)}
                 </tr>
             </thead>
             <tbody>
                 {data.map((row, index) => (
-                    <tr key={index} style={{ borderBottom: '1px solid #eee' }}>
+                    <tr key={index}>
                         {columns.map((col) => (
-                            <td key={col.key} style={{ padding: '10px' }}>
+                            <td key={col.key}>
                                 {col.render ? col.render(row) : row[col.key]}
                             </td>
                         ))}

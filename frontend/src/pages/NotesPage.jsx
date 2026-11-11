@@ -80,8 +80,8 @@ export const NotesPage = () => {
             <h2>Мои заметки</h2>
 
             {/* Форма создания */}
-            <form onSubmit={handleCreate} style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ccc', borderRadius: '5px' }}>
-                <h3>Добавить заметку</h3>
+            <form onSubmit={handleCreate} className="card p-4 mb-4 shadow-sm">
+                <h4 className="mb-3">Добавить заметку</h4>
                 <Input
                     label="Заголовок"
                     value={title}
@@ -94,7 +94,7 @@ export const NotesPage = () => {
                     onChange={(e) => setContent(e.target.value)}
                     placeholder="Введите текст"
                 />
-                <Button type="submit">Создать</Button>
+                <Button type="submit">Создать заметку</Button>
             </form>
 
             {/* Таблица */}
