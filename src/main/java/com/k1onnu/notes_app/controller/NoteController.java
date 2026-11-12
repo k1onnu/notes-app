@@ -42,11 +42,10 @@ public class NoteController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) Long ownerId,
-            @RequestParam(required = false) String searchContent,
             @RequestParam(defaultValue = "id") String sortBy,
-            Authentication authentication) {
-        return noteService.getAllNotes(page, size, search, ownerId, searchContent, sortBy);
+            java.security.Principal principal) {
+
+        return noteService.getAllNotes(page, size, search, sortBy, principal.getName());
     }
 
     @GetMapping("/stats")

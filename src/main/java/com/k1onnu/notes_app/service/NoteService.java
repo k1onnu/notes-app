@@ -40,21 +40,19 @@ public class NoteService {
         return mapToResponse(savedNote);
     }
 
-    // Обновленный метод с поиском и сортировкой
-    public Page<NoteResponse> getAllNotes(int page, int size, String search, Long ownerId, String searchContent, String sortBy) {
-        Sort sort = Sort.by(sortBy);
-        Pageable pageable = PageRequest.of(page, size, sort);
+    public Page<NoteResponse> getAllNotes(int page, int size, String search, String sortBy, String username) {
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy));
 
         if (search != null && !search.isEmpty()) {
-            return noteRepository.findByTitleContainingIgnoreCase(search, pageable).map(this::mapToResponse);
+            return noteRepository.findByOwnerIdAndTitleContainingIgnoreCase(currentUser.getId(), search, pageable)
+                    .map(this::mapToResponse);
         }
-        if (ownerId != null) {
-            return noteRepository.findByOwnerId(ownerId, pageable).map(this::mapToResponse);
-        }
-        if (searchContent != null && !searchContent.isEmpty()) {
-            return noteRepository.findByContentContainingIgnoreCase(searchContent, pageable).map(this::mapToResponse);
-        }
-        return noteRepository.findAll(pageable).map(this::mapToResponse);
+
+        return noteRepository.findByOwnerId(currentUser.getId(), pageable)
+                .map(this::mapToResponse);
     }
 
     // Статистика: все юзеры и количество их заметок
