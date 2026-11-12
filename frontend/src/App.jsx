@@ -1,5 +1,7 @@
 import React from 'react';
 import { Routes, Route, NavLink } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { Home } from './pages/Home';
 import { NotesPage } from './pages/NotesPage';
 import { NotFound } from './pages/NotFound';
@@ -45,6 +47,9 @@ function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>
+
+      {/* Контейнер для всплывающих уведомлений */}
+      <ToastContainer position="bottom-right" autoClose={3000} />
     </div>
   );
 }
