@@ -31,7 +31,6 @@ class NoteServiceTest {
     @InjectMocks
     private NoteService noteService;
 
-    // Успешное создание
     @Test
     void createNote_ShouldReturnSavedNote() {
         User user = new User();
@@ -42,14 +41,15 @@ class NoteServiceTest {
         request.setTitle("Test Title");
         request.setContent("Test Content");
 
-        when(userRepository.findAll()).thenReturn(java.util.List.of(user));
+        when(userRepository.findByUsername("testuser")).thenReturn(Optional.of(user));
+
         when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> {
             Note note = invocation.getArgument(0);
             note.setId(10L);
             return note;
         });
 
-        NoteResponse response = noteService.createNote(request);
+        NoteResponse response = noteService.createNote(request, "testuser");
 
         assertNotNull(response);
         assertEquals(10L, response.getId());
@@ -57,19 +57,15 @@ class NoteServiceTest {
         assertEquals(1L, response.getOwnerId());
     }
 
-    // На ошибку 404
     @Test
     void getNoteById_ShouldThrowException_WhenNotFound() {
         when(noteRepository.findById(99L)).thenReturn(Optional.empty());
-
         assertThrows(NotFoundException.class, () -> noteService.getNoteById(99L));
     }
 
-    // На удаление несуществующей заметки
     @Test
     void deleteNote_ShouldThrowException_WhenNotFound() {
         when(noteRepository.existsById(99L)).thenReturn(false);
-
         assertThrows(NotFoundException.class, () -> noteService.deleteNote(99L));
         verify(noteRepository, never()).deleteById(99L);
     }

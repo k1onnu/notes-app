@@ -19,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import java.security.Principal;
 
 import java.util.List;
 
@@ -31,8 +33,8 @@ public class NoteController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public NoteResponse createNote(@Valid @RequestBody NoteRequest request) {
-        return noteService.createNote(request);
+    public NoteResponse createNote(@Valid @RequestBody NoteRequest request, Principal principal) {
+        return noteService.createNote(request, principal.getName());
     }
 
     @GetMapping
@@ -42,7 +44,8 @@ public class NoteController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long ownerId,
             @RequestParam(required = false) String searchContent,
-            @RequestParam(defaultValue = "id") String sortBy) {
+            @RequestParam(defaultValue = "id") String sortBy,
+            Authentication authentication) {
         return noteService.getAllNotes(page, size, search, ownerId, searchContent, sortBy);
     }
 

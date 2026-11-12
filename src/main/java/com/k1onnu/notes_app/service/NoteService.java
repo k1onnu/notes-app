@@ -26,10 +26,10 @@ public class NoteService {
     private final NoteRepository noteRepository;
     private final UserRepository userRepository;
 
-    public NoteResponse createNote(NoteRequest request) {
-        // Временно берем первого пользователя из БД
-        User owner = userRepository.findAll().stream().findFirst()
-                .orElseThrow(() -> new NotFoundException("Нет пользователей в БД. Создайте через SQL."));
+    public NoteResponse createNote(NoteRequest request, String username) {
+        // Ищем того, кто прислал токен
+        User owner = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Пользователь из токена не найден"));
 
         Note note = new Note();
         note.setTitle(request.getTitle());
