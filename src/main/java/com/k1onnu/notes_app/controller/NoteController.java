@@ -69,8 +69,8 @@ public class NoteController {
     }
 
     @PutMapping("/{id}")
-    public NoteResponse updateNote(@PathVariable Long id, @Valid @RequestBody NoteRequest request) {
-        return noteService.updateNote(id, request);
+    public NoteResponse updateNote(@PathVariable Long id, @Valid @RequestBody NoteRequest request, Principal principal) {
+        return noteService.updateNote(id, request, principal.getName());
     }
 
     @DeleteMapping("/{id}")
@@ -79,8 +79,13 @@ public class NoteController {
         noteService.deleteNote(id);
     }
 
+    @DeleteMapping("/{id}/share/{username}")
+    public void revokeAccess(@PathVariable Long id, @PathVariable String username, Principal principal) {
+        noteService.revokeAccess(id, username, principal.getName());
+    }
+
     @PatchMapping("/{id}")
-    public NoteResponse patchNote(@PathVariable Long id, @RequestBody NotePatchRequest request) {
-        return noteService.patchNote(id, request);
+    public NoteResponse patchNote(@PathVariable Long id, @RequestBody NotePatchRequest request, Principal principal) {
+        return noteService.patchNote(id, request, principal.getName());
     }
 }

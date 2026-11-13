@@ -16,5 +16,8 @@ public interface NoteAccessRepository extends JpaRepository<NoteAccess, NoteAcce
 
     List<NoteAccess> findAllByUserId(Long userId);
 
-    void deleteByNoteIdAndUserId(Long noteId, Long userId);
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @org.springframework.data.jpa.repository.Query("DELETE FROM NoteAccess na WHERE na.note.id = :noteId AND na.user.id = :userId")
+    void deleteByNoteIdAndUserId(@org.springframework.data.repository.query.Param("noteId") Long noteId, @org.springframework.data.repository.query.Param("userId") Long userId);
 }

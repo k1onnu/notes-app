@@ -2,6 +2,7 @@ package com.k1onnu.notes_app.dto;
 
 import lombok.Data;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class NoteResponse {
@@ -12,4 +13,5 @@ public class NoteResponse {
     private LocalDateTime updatedAt;
     private Long ownerId;
     private String ownerName;
+    private List<ShareInfoResponse> sharedWith;
 }
