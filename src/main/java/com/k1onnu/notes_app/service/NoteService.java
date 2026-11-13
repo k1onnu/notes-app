@@ -1,10 +1,6 @@
 package com.k1onnu.notes_app.service;
 
-import com.k1onnu.notes_app.dto.NotePatchRequest;
-import com.k1onnu.notes_app.dto.NoteRequest;
-import com.k1onnu.notes_app.dto.NoteResponse;
-import com.k1onnu.notes_app.dto.UserStatsResponse;
-import com.k1onnu.notes_app.dto.ShareRequest;
+import com.k1onnu.notes_app.dto.*;
 import com.k1onnu.notes_app.exception.NotFoundException;
 import com.k1onnu.notes_app.exception.ConflictException;
 import com.k1onnu.notes_app.model.Note;
@@ -19,6 +15,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,6 +28,7 @@ public class NoteService {
     private final NoteRepository noteRepository;
     private final UserRepository userRepository;
     private final NoteAccessRepository noteAccessRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     public void shareNote(Long noteId, ShareRequest request, String ownerUsername) {
         Note note = noteRepository.findByIdWithOwner(noteId)
@@ -61,6 +60,22 @@ public class NoteService {
         access.setCanEdit(request.getCanEdit());
 
         noteAccessRepository.save(access);
+    }
+
+    // Отзыв доступа
+    @Transactional
+    public void revokeAccess(Long noteId, String targetUsername, String ownerUsername) {
+        Note note = noteRepository.findByIdWithOwner(noteId)
+                .orElseThrow(() -> new NotFoundException("Заметка не найдена"));
+
+        if (!note.getOwner().getUsername().equals(ownerUsername)) {
+            throw new RuntimeException("Только владелец может отзывать доступ");
+        }
+
+        User targetUser = userRepository.findByUsername(targetUsername)
+                .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
+
+        noteAccessRepository.deleteByNoteIdAndUserId(noteId, targetUser.getId());
     }
 
     public NoteResponse createNote(NoteRequest request, String username) {
@@ -108,18 +123,37 @@ public class NoteService {
     }
 
     public NoteResponse getNoteById(Long id) {
-        Note note = noteRepository.findById(id)
+        Note note = noteRepository.findByIdWithOwner(id)
                 .orElseThrow(() -> new NotFoundException("Заметка не найдена"));
+
+        org.hibernate.Hibernate.initialize(note.getOwner());
+
         return mapToResponse(note);
     }
 
-    public NoteResponse updateNote(Long id, NoteRequest request) {
+    public NoteResponse updateNote(Long id, NoteRequest request, String username) {
         Note note = noteRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Заметка не найдена"));
 
         note.setTitle(request.getTitle());
         note.setContent(request.getContent());
-        return mapToResponse(noteRepository.save(note));
+        Note savedNote = noteRepository.save(note);
+
+        NoteResponse response = new NoteResponse();
+        response.setId(savedNote.getId());
+        response.setTitle(savedNote.getTitle());
+        response.setContent(savedNote.getContent());
+        response.setCreatedAt(savedNote.getCreatedAt());
+        response.setUpdatedAt(savedNote.getUpdatedAt());
+
+        User owner = userRepository.findById(savedNote.getOwner().getId())
+                .orElseThrow(() -> new NotFoundException("Владелец не найден"));
+
+        response.setOwnerId(owner.getId());
+        response.setOwnerName(owner.getUsername());
+
+        messagingTemplate.convertAndSend("/topic/notes/" + id, response);
+        return response;
     }
 
     public void deleteNote(Long id) {
@@ -129,14 +163,28 @@ public class NoteService {
         noteRepository.deleteById(id);
     }
 
-    public NoteResponse patchNote(Long id, NotePatchRequest request) {
-        Note note = noteRepository.findById(id)
+    public NoteResponse patchNote(Long id, NotePatchRequest request, String username) {
+        Note note = noteRepository.findByIdWithOwner(id)
                 .orElseThrow(() -> new NotFoundException("Заметка не найдена"));
+
+        User currentUser = userRepository.findByUsername(username)
+                .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
+
+        if (!note.getOwner().getUsername().equals(username)) {
+            NoteAccess access = noteAccessRepository.findByNoteIdAndUserId(id, currentUser.getId())
+                    .orElseThrow(() -> new RuntimeException("У вас нет доступа к этой заметке"));
+
+            if (!access.getCanEdit()) {
+                throw new RuntimeException("У вас нет прав на редактирование (только чтение)");
+            }
+        }
 
         if (request.getTitle() != null) note.setTitle(request.getTitle());
         if (request.getContent() != null) note.setContent(request.getContent());
 
-        return mapToResponse(noteRepository.save(note));
+        Note savedNote = noteRepository.save(note);
+
+        return mapToResponse(savedNote);
     }
 
     private NoteResponse mapToResponse(Note note) {
@@ -146,8 +194,24 @@ public class NoteService {
         response.setContent(note.getContent());
         response.setCreatedAt(note.getCreatedAt());
         response.setUpdatedAt(note.getUpdatedAt());
-        response.setOwnerId(note.getOwner().getId());
-        response.setOwnerName(note.getOwner().getUsername());
+
+        User owner = userRepository.findById(note.getOwner().getId()).orElse(null);
+        if (owner != null) {
+            response.setOwnerId(owner.getId());
+            response.setOwnerName(owner.getUsername());
+        }
+
+        List<ShareInfoResponse> sharedWith = new java.util.ArrayList<>();
+        List<NoteAccess> accessList = noteAccessRepository.findAllByNoteId(note.getId());
+
+        for (NoteAccess access : accessList) {
+            User targetUser = userRepository.findById(access.getUser().getId()).orElse(null);
+            if (targetUser != null) {
+                sharedWith.add(new ShareInfoResponse(targetUser.getUsername(), access.getCanEdit()));
+            }
+        }
+        response.setSharedWith(sharedWith);
+
         return response;
     }
 }
