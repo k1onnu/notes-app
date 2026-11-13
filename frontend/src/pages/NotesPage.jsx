@@ -1,3 +1,5 @@
+import SockJS from 'sockjs-client/dist/sockjs';
+import { Client } from '@stomp/stompjs';
 import React, { useState, useEffect } from 'react';
 import api from '../api/axiosConfig';
 import { Table } from '../components/Table';
@@ -15,9 +17,16 @@ export const NotesPage = () => {
     const [search, setSearch] = useState("");
     const [sortBy, setSortBy] = useState("id");
 
+    const [stompClient, setStompClient] = useState(null);
+
     // Форма
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
+
+    // Состояние для редактирования заметки
+    const [editNote, setEditNote] = useState(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editContent, setEditContent] = useState('');
 
     // Состояние для чтения заметки
     const [selectedNote, setSelectedNote] = useState(null);
@@ -26,6 +35,7 @@ export const NotesPage = () => {
     const [shareNoteId, setShareNoteId] = useState(null);
     const [shareUsername, setShareUsername] = useState('');
     const [shareCanEdit, setShareCanEdit] = useState(true);
+    const [shareAction, setShareAction] = useState('grant'); // 'grant' или 'revoke'
 
     const fetchNotes = async () => {
         try {
@@ -45,6 +55,52 @@ export const NotesPage = () => {
     useEffect(() => {
         fetchNotes();
     }, [page, search, sortBy]);
+
+    // эффект для websocket
+    useEffect(() => {
+        const socket = new SockJS('http://localhost:8080/ws');
+        const client = new Client({
+            webSocketFactory: () => socket,
+            reconnectDelay: 5000,
+            onConnect: () => {
+                console.log('WebSocket подключен!');
+                setStompClient(client);
+            }
+        });
+
+        client.activate();
+
+        // Отключаемся при размонтировании компонента
+        return () => {
+            if (client.active) {
+                client.deactivate();
+            }
+        };
+    }, []);
+
+    // эффект для подписки на обновления конкретных заметок
+    useEffect(() => {
+        if (!stompClient || !stompClient.connected || notes.length === 0) return;
+
+        const subscriptions = notes.map(note =>
+            stompClient.subscribe(`/topic/notes/${note.id}`, (message) => {
+                if (message.body) {
+                    const updatedNote = JSON.parse(message.body);
+                    console.log('Пришло обновление:', updatedNote);
+
+                    // Обновляем конкретную заметку в нашем стейте
+                    setNotes(prevNotes =>
+                        prevNotes.map(n => n.id === updatedNote.id ? updatedNote : n)
+                    );
+                }
+            })
+        );
+
+        // Отписываемся от старых топиков при обновлении списка или размонтировании
+        return () => {
+            subscriptions.forEach(sub => sub.unsubscribe());
+        };
+    }, [stompClient, notes]);
 
     const handleCreate = async (e) => {
         e.preventDefault();
@@ -75,7 +131,7 @@ export const NotesPage = () => {
         }
     };
 
-    // Обработчик шаринга
+    // Обработчик выдачи доступа
     const handleShare = async (e) => {
         e.preventDefault();
         if (!shareUsername) return toast.warning('Введите имя пользователя');
@@ -94,70 +150,136 @@ export const NotesPage = () => {
         }
     };
 
-        const columns = [
-            { key: 'id', title: 'ID' },
-            { key: 'title', title: 'Заголовок' },
-            {
-                key: 'ownerName',
-                title: 'Владелец',
-                render: (row) => {
-                    const currentUser = localStorage.getItem('username');
+    // Обработчик отзыва доступа
+    const handleRevoke = async (e) => {
+        e.preventDefault();
+        if (!shareUsername) return toast.warning('Введите имя пользователя');
 
-                    // Если владелец не я — это общая заметка
-                    if (row.ownerName !== currentUser) {
-                        return (
-                            <span className="badge bg-warning text-dark" title="Расшарено со мной">
-                                🤝 {row.ownerName}
-                            </span>
-                        );
-                    }
+        try {
+            await api.delete(`/notes/${shareNoteId}/share/${shareUsername}`);
+            toast.success('Доступ отозван!');
+            setShareNoteId(null);
+            setShareUsername('');
+            fetchNotes();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Ошибка при отзыве доступа');
+        }
+    };
 
-                    // Если это моя заметка
-                    return <span className="badge bg-secondary">👤 Я</span>;
+    // Обработчик редактирования
+    const handleOpenEdit = (row) => {
+        setEditNote(row);
+        setEditTitle(row.title);
+        setEditContent(row.content);
+    };
+
+    const handleUpdate = async (e) => {
+        e.preventDefault();
+        if (!editTitle.trim()) return toast.warning('Заголовок не может быть пустым');
+
+        try {
+            await api.put(`/notes/${editNote.id}`, {
+                title: editTitle,
+                content: editContent
+            });
+            toast.success('Заметка обновлена!');
+            setEditNote(null);
+            fetchNotes();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Ошибка при обновлении заметки');
+        }
+    };
+
+    const columns = [
+        { key: 'id', title: 'ID' },
+        { key: 'title', title: 'Заголовок' },
+        {
+            key: 'ownerName',
+            title: 'Владелец',
+            render: (row) => {
+                const currentUser = localStorage.getItem('username');
+
+                // Если владелец не я — это общая заметка
+                if (row.ownerName !== currentUser) {
+                    return (
+                        <span className="badge bg-warning text-dark" title="Поделился со мной">
+                             {row.ownerName}
+                        </span>
+                    );
                 }
-            },
-            {
-                key: 'content',
-                title: 'Текст',
-                render: (row) => (
-                    <div className="text-truncate" style={{ maxWidth: '200px' }} title={row.content}>
-                        {row.content}
-                    </div>
-                )
-            },
-            {
-                key: 'createdAt',
-                title: 'Дата',
-                render: (row) => {
-                    if (!row.createdAt) return '-';
-                    const date = new Date(row.createdAt);
-                    return date.toLocaleString('ru-RU', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                }
-            },
-            {
-                key: 'actions',
-                title: 'Действия',
-                render: (row) => (
-                    <div className="d-flex gap-1">
-                        <Button variant="primary" onClick={() => setSelectedNote(row)}>
-                            Читать
-                        </Button>
-                        <Button variant="primary" onClick={() => setShareNoteId(row.id)}>
-                            Поделиться
-                        </Button>
-                        <Button variant="danger" onClick={() => handleDelete(row.id)}>
-                            Удалить
-                        </Button>
-                    </div>
-                )
+
+                // Если это моя заметка
+                return <span className="badge bg-secondary">👤 Я</span>;
             }
-        ];
+        },
+        {
+            key: 'content',
+            title: 'Текст',
+            render: (row) => (
+                <div className="text-truncate" style={{ maxWidth: '200px' }} title={row.content}>
+                    {row.content}
+                </div>
+            )
+        },
+        {
+            key: 'createdAt',
+            title: 'Дата',
+            render: (row) => {
+                if (!row.createdAt) return '-';
+                const date = new Date(row.createdAt);
+                return date.toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        },
+        {
+            key: 'actions',
+            title: 'Действия',
+            render: (row) => {
+                const currentUser = localStorage.getItem('username');
+                const isOwner = row.ownerName === currentUser;
+
+                return (
+                    <div className="d-flex flex-column gap-1">
+                        {/* Показываем, с кем поделились (только владельцу) */}
+                        {isOwner && row.sharedWith && row.sharedWith.length > 0 && (
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                                 Доступ: {row.sharedWith.map(s => `${s.username} (${s.canEdit ? 'ред.' : 'чтение'})`).join(', ')}
+                            </div>
+                        )}
+
+                        <div className="d-flex gap-1">
+                            <Button variant="primary" onClick={() => setSelectedNote(row)}>
+                                Читать
+                            </Button>
+
+                            <Button variant="primary" onClick={() => handleOpenEdit(row)}>
+                                Изменить
+                            </Button>
+
+                            {/* Кнопку Доступ показываем ТОЛЬКО владельцу! */}
+                            {isOwner && (
+                                <Button variant="primary" onClick={() => setShareNoteId(row.id)}>
+                                    Доступ
+                                </Button>
+                            )}
+
+                            {/* Удалить может только владелец (по ТЗ) */}
+                            {isOwner && (
+                                <Button variant="danger" onClick={() => handleDelete(row.id)}>
+                                    Удалить
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                );
+            }
+        }
+    ];
 
     return (
         <div>
@@ -214,34 +336,71 @@ export const NotesPage = () => {
                 </div>
             </Modal>
 
-            {/* Модалка шаринга */}
+            {/* Модалка управления доступом */}
             <Modal
                 isOpen={shareNoteId !== null}
                 onClose={() => setShareNoteId(null)}
-                title="Поделиться заметкой"
+                title="Управление доступом"
             >
-                <form onSubmit={handleShare}>
-                    <Input
-                        label="Имя пользователя (кому даем доступ)"
-                        value={shareUsername}
-                        onChange={(e) => setShareUsername(e.target.value)}
-                        placeholder="Введите логин (например, tester_a)"
-                    />
-
-                    <div className="form-check mb-3">
-                        <input
-                            className="form-check-input"
-                            type="checkbox"
-                            checked={shareCanEdit}
-                            onChange={(e) => setShareCanEdit(e.target.checked)}
-                            id="canEditCheck"
-                        />
-                        <label className="form-check-label" htmlFor="canEditCheck">
-                            Разрешить редактирование (если снять галочку — только чтение)
-                        </label>
+                <form onSubmit={shareAction === 'grant' ? handleShare : handleRevoke}>
+                    <div className="mb-3">
+                        <label className="form-label">Действие</label>
+                        <select
+                            className="form-select"
+                            value={shareAction}
+                            onChange={(e) => setShareAction(e.target.value)}
+                        >
+                            <option value="grant">Выдать доступ</option>
+                            <option value="revoke">Отозвать доступ</option>
+                        </select>
                     </div>
 
-                    <Button type="submit">Поделиться</Button>
+                    <Input
+                        label="Имя пользователя"
+                        value={shareUsername}
+                        onChange={(e) => setShareUsername(e.target.value)}
+                        placeholder="Введите логин"
+                    />
+
+                    {shareAction === 'grant' && (
+                        <div className="form-check mb-3">
+                            <input
+                                className="form-check-input"
+                                type="checkbox"
+                                checked={shareCanEdit}
+                                onChange={(e) => setShareCanEdit(e.target.checked)}
+                                id="canEditCheck"
+                            />
+                            <label className="form-check-label" htmlFor="canEditCheck">
+                                Разрешить редактирование (если снять галочку — только чтение)
+                            </label>
+                        </div>
+                    )}
+
+                    <Button type="submit" variant={shareAction === 'revoke' ? 'danger' : 'primary'}>
+                        {shareAction === 'grant' ? 'Поделиться' : 'Отозвать доступ'}
+                    </Button>
+                </form>
+            </Modal>
+
+            {/* Модалка редактирования */}
+            <Modal
+                isOpen={editNote !== null}
+                onClose={() => setEditNote(null)}
+                title="Редактировать заметку"
+            >
+                <form onSubmit={handleUpdate}>
+                    <Input
+                        label="Заголовок"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                    />
+                    <Input
+                        label="Текст"
+                        value={editContent}
+                        onChange={(e) => setEditContent(e.target.value)}
+                    />
+                    <Button type="submit">Сохранить</Button>
                 </form>
             </Modal>
         </div>
