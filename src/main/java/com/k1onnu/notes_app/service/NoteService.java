@@ -195,19 +195,19 @@ public class NoteService {
         response.setCreatedAt(note.getCreatedAt());
         response.setUpdatedAt(note.getUpdatedAt());
 
-        User owner = userRepository.findById(note.getOwner().getId()).orElse(null);
-        if (owner != null) {
-            response.setOwnerId(owner.getId());
-            response.setOwnerName(owner.getUsername());
+        if (note.getOwner() != null) {
+            response.setOwnerId(note.getOwner().getId());
+            response.setOwnerName(note.getOwner().getUsername());
         }
 
         List<ShareInfoResponse> sharedWith = new java.util.ArrayList<>();
-        List<NoteAccess> accessList = noteAccessRepository.findAllByNoteId(note.getId());
-
-        for (NoteAccess access : accessList) {
-            User targetUser = userRepository.findById(access.getUser().getId()).orElse(null);
-            if (targetUser != null) {
-                sharedWith.add(new ShareInfoResponse(targetUser.getUsername(), access.getCanEdit()));
+        if (note.getId() != null) {
+            List<NoteAccess> accessList = noteAccessRepository.findAllByNoteId(note.getId());
+            for (NoteAccess access : accessList) {
+                User targetUser = userRepository.findById(access.getUser().getId()).orElse(null);
+                if (targetUser != null) {
+                    sharedWith.add(new ShareInfoResponse(targetUser.getUsername(), access.getCanEdit()));
+                }
             }
         }
         response.setSharedWith(sharedWith);
