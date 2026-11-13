@@ -3,6 +3,7 @@ package com.k1onnu.notes_app.controller;
 import com.k1onnu.notes_app.dto.NotePatchRequest;
 import com.k1onnu.notes_app.dto.NoteRequest;
 import com.k1onnu.notes_app.dto.NoteResponse;
+import com.k1onnu.notes_app.dto.ShareRequest;
 import com.k1onnu.notes_app.service.NoteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +20,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.security.core.Authentication;
 import java.security.Principal;
 
 import java.util.List;
@@ -46,6 +46,11 @@ public class NoteController {
             java.security.Principal principal) {
 
         return noteService.getAllNotes(page, size, search, sortBy, principal.getName());
+    }
+
+    @PostMapping("/{id}/share")
+    public void shareNote(@PathVariable Long id, @Valid @RequestBody ShareRequest request, Principal principal) {
+        noteService.shareNote(id, request, principal.getName());
     }
 
     @GetMapping("/stats")

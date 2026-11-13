@@ -4,11 +4,15 @@ import com.k1onnu.notes_app.dto.NotePatchRequest;
 import com.k1onnu.notes_app.dto.NoteRequest;
 import com.k1onnu.notes_app.dto.NoteResponse;
 import com.k1onnu.notes_app.dto.UserStatsResponse;
+import com.k1onnu.notes_app.dto.ShareRequest;
 import com.k1onnu.notes_app.exception.NotFoundException;
+import com.k1onnu.notes_app.exception.ConflictException;
 import com.k1onnu.notes_app.model.Note;
 import com.k1onnu.notes_app.model.User;
+import com.k1onnu.notes_app.model.NoteAccess;
 import com.k1onnu.notes_app.repository.NoteRepository;
 import com.k1onnu.notes_app.repository.UserRepository;
+import com.k1onnu.notes_app.repository.NoteAccessRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +29,39 @@ public class NoteService {
 
     private final NoteRepository noteRepository;
     private final UserRepository userRepository;
+    private final NoteAccessRepository noteAccessRepository;
+
+    public void shareNote(Long noteId, ShareRequest request, String ownerUsername) {
+        Note note = noteRepository.findByIdWithOwner(noteId)
+                .orElseThrow(() -> new NotFoundException("Заметка не найдена"));
+
+        if (!note.getOwner().getUsername().equals(ownerUsername)) {
+            throw new RuntimeException("Только владелец может делиться заметкой");
+        }
+
+        User targetUser = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new NotFoundException("Пользователь не найден"));
+
+        if (targetUser.getUsername().equals(ownerUsername)) {
+            throw new ConflictException("Нельзя поделиться заметкой с самим собой");
+        }
+
+        if (noteAccessRepository.findByNoteIdAndUserId(noteId, targetUser.getId()).isPresent()) {
+            throw new ConflictException("У этого пользователя уже есть доступ");
+        }
+
+        NoteAccess access = new NoteAccess();
+        NoteAccess.NoteAccessId id = new NoteAccess.NoteAccessId();
+        id.setNoteId(noteId);
+        id.setUserId(targetUser.getId());
+
+        access.setId(id);
+        access.setNote(note);
+        access.setUser(targetUser);
+        access.setCanEdit(request.getCanEdit());
+
+        noteAccessRepository.save(access);
+    }
 
     public NoteResponse createNote(NoteRequest request, String username) {
         // Ищем того, кто прислал токен
@@ -51,7 +88,7 @@ public class NoteService {
                     .map(this::mapToResponse);
         }
 
-        return noteRepository.findByOwnerId(currentUser.getId(), pageable)
+        return noteRepository.findAllAccessibleToUser(currentUser.getId(), pageable)
                 .map(this::mapToResponse);
     }
 
@@ -110,6 +147,7 @@ public class NoteService {
         response.setCreatedAt(note.getCreatedAt());
         response.setUpdatedAt(note.getUpdatedAt());
         response.setOwnerId(note.getOwner().getId());
+        response.setOwnerName(note.getOwner().getUsername());
         return response;
     }
 }

@@ -11,4 +11,5 @@ public class NoteResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private Long ownerId;
+    private String ownerName;
 }
