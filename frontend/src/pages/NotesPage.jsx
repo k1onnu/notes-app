@@ -19,8 +19,13 @@ export const NotesPage = () => {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
 
-    // Состояние для модального окна
+    // Состояние для чтения заметки
     const [selectedNote, setSelectedNote] = useState(null);
+
+    // Состояние для шаринга
+    const [shareNoteId, setShareNoteId] = useState(null);
+    const [shareUsername, setShareUsername] = useState('');
+    const [shareCanEdit, setShareCanEdit] = useState(true);
 
     const fetchNotes = async () => {
         try {
@@ -70,49 +75,89 @@ export const NotesPage = () => {
         }
     };
 
-    // Колонки для таблицы
-    const columns = [
-        { key: 'id', title: 'ID' },
-        { key: 'title', title: 'Заголовок' },
-        {
-            key: 'content',
-            title: 'Текст',
-            render: (row) => (
-                <div className="text-truncate" style={{ maxWidth: '200px' }} title={row.content}>
-                    {row.content}
-                </div>
-            )
-        },
-        {
-            key: 'createdAt',
-            title: 'Дата',
-            render: (row) => {
-                if (!row.createdAt) return '-';
-                const date = new Date(row.createdAt);
-                return date.toLocaleString('ru-RU', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            }
-        },
-        {
-            key: 'actions',
-            title: 'Действия',
-            render: (row) => (
-                <div className="d-flex gap-1">
-                    <Button variant="primary" onClick={() => setSelectedNote(row)}>
-                        Читать
-                    </Button>
-                    <Button variant="danger" onClick={() => handleDelete(row.id)}>
-                        Удалить
-                    </Button>
-                </div>
-            )
+    // Обработчик шаринга
+    const handleShare = async (e) => {
+        e.preventDefault();
+        if (!shareUsername) return toast.warning('Введите имя пользователя');
+
+        try {
+            await api.post(`/notes/${shareNoteId}/share`, {
+                username: shareUsername,
+                canEdit: shareCanEdit
+            });
+            toast.success('Заметка успешно расшарена!');
+            setShareNoteId(null);
+            setShareUsername('');
+            fetchNotes();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Ошибка при шаринге');
         }
-    ];
+    };
+
+        const columns = [
+            { key: 'id', title: 'ID' },
+            { key: 'title', title: 'Заголовок' },
+            {
+                key: 'ownerName',
+                title: 'Владелец',
+                render: (row) => {
+                    const currentUser = localStorage.getItem('username');
+
+                    // Если владелец не я — это общая заметка
+                    if (row.ownerName !== currentUser) {
+                        return (
+                            <span className="badge bg-warning text-dark" title="Расшарено со мной">
+                                🤝 {row.ownerName}
+                            </span>
+                        );
+                    }
+
+                    // Если это моя заметка
+                    return <span className="badge bg-secondary">👤 Я</span>;
+                }
+            },
+            {
+                key: 'content',
+                title: 'Текст',
+                render: (row) => (
+                    <div className="text-truncate" style={{ maxWidth: '200px' }} title={row.content}>
+                        {row.content}
+                    </div>
+                )
+            },
+            {
+                key: 'createdAt',
+                title: 'Дата',
+                render: (row) => {
+                    if (!row.createdAt) return '-';
+                    const date = new Date(row.createdAt);
+                    return date.toLocaleString('ru-RU', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+            },
+            {
+                key: 'actions',
+                title: 'Действия',
+                render: (row) => (
+                    <div className="d-flex gap-1">
+                        <Button variant="primary" onClick={() => setSelectedNote(row)}>
+                            Читать
+                        </Button>
+                        <Button variant="primary" onClick={() => setShareNoteId(row.id)}>
+                            Поделиться
+                        </Button>
+                        <Button variant="danger" onClick={() => handleDelete(row.id)}>
+                            Удалить
+                        </Button>
+                    </div>
+                )
+            }
+        ];
 
     return (
         <div>
@@ -158,7 +203,7 @@ export const NotesPage = () => {
                 </div>
             )}
 
-            {/* Само модальное окно (рендерится, только если selectedNote не null) */}
+            {/* Модалка чтения */}
             <Modal
                 isOpen={selectedNote !== null}
                 onClose={() => setSelectedNote(null)}
@@ -167,6 +212,37 @@ export const NotesPage = () => {
                 <div style={{ whiteSpace: 'pre-wrap' }}>
                     {selectedNote?.content}
                 </div>
+            </Modal>
+
+            {/* Модалка шаринга */}
+            <Modal
+                isOpen={shareNoteId !== null}
+                onClose={() => setShareNoteId(null)}
+                title="Поделиться заметкой"
+            >
+                <form onSubmit={handleShare}>
+                    <Input
+                        label="Имя пользователя (кому даем доступ)"
+                        value={shareUsername}
+                        onChange={(e) => setShareUsername(e.target.value)}
+                        placeholder="Введите логин (например, tester_a)"
+                    />
+
+                    <div className="form-check mb-3">
+                        <input
+                            className="form-check-input"
+                            type="checkbox"
+                            checked={shareCanEdit}
+                            onChange={(e) => setShareCanEdit(e.target.checked)}
+                            id="canEditCheck"
+                        />
+                        <label className="form-check-label" htmlFor="canEditCheck">
+                            Разрешить редактирование (если снять галочку — только чтение)
+                        </label>
+                    </div>
+
+                    <Button type="submit">Поделиться</Button>
+                </form>
             </Modal>
         </div>
     );
