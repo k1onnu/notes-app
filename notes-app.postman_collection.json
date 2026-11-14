@@ -9,23 +9,21 @@
   },
   "item": [
     {
-      "name": "Get data",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test(\"Status code is 200\", function () {\n    pm.response.to.have.status(200);\n});"
-            ]
-          }
-        }
-      ],
+      "name": "Register User",
       "request": {
-        "method": "GET",
+        "method": "POST",
         "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"username\": \"tester_c\",\r\n  \"password\": \"12345\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
         "url": {
-          "raw": "http://localhost:8080/api/notes",
+          "raw": "http://localhost:8080/api/auth/register",
           "protocol": "http",
           "host": [
             "localhost"
@@ -33,22 +31,22 @@
           "port": "8080",
           "path": [
             "api",
-            "notes"
+            "auth",
+            "register"
           ]
-        },
-        "description": "This is a GET request and it is used to \"get\" data from an endpoint. There is no request body for a GET request, but you can use query parameters to help specify the resource you want data on (e.g., in this request, we have `id=1`).\n\nA successful GET response will have a `200 OK` status, and should include some kind of response body - for example, HTML web content or JSON data."
+        }
       },
       "response": []
     },
     {
-      "name": "Post data",
+      "name": "Login User",
       "event": [
         {
           "listen": "test",
           "script": {
             "type": "text/javascript",
             "exec": [
-              "pm.test(\"Successful POST request\", function () {\n    pm.expect(pm.response.code).to.be.oneOf([200, 201]);\n});\n"
+              "var jsonData = pm.response.json();\r\nif (jsonData.token) {\r\n    pm.collectionVariables.set(\"token\", jsonData.token);\r\n    console.log(\"Токен сохранен!\");\r\n}"
             ]
           }
         }
@@ -58,7 +56,42 @@
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"title\": \"Заметка из Postman\",\n  \"content\": \"Проверка API\"\n}",
+          "raw": "{\r\n  \"username\": \"tester_c\",\r\n  \"password\": \"12345\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/auth/login",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Note",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"title\": \"Заметка тестера С\",\r\n  \"content\": \"Проверка работы Postman\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -76,19 +109,23 @@
             "api",
             "notes"
           ]
-        },
-        "description": "This is a POST request, submitting data to an API via the request body. This request submits JSON data, and the data is reflected in the response.\n\nA successful POST request typically returns a `200 OK` or `201 Created` response code."
+        }
       },
       "response": []
     },
     {
-      "name": "Patch data",
+      "name": "Share Note",
       "request": {
-        "method": "PATCH",
-        "header": [],
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n  \"title\": \"Обновленный заголовок\"\r\n}",
+          "raw": "{\r\n  \"username\": \"tester_a\",\r\n  \"canEdit\": true\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -96,7 +133,7 @@
           }
         },
         "url": {
-          "raw": "http://localhost:8080/api/notes/1",
+          "raw": "http://localhost:8080/api/notes/19/share",
           "protocol": "http",
           "host": [
             "localhost"
@@ -105,19 +142,25 @@
           "path": [
             "api",
             "notes",
-            "1"
+            "19",
+            "share"
           ]
         }
       },
       "response": []
     },
     {
-      "name": "Delete Data",
+      "name": "Revoke Access",
       "request": {
         "method": "DELETE",
-        "header": [],
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
         "url": {
-          "raw": "http://localhost:8080/api/notes/1",
+          "raw": "http://localhost:8080/api/notes/19/share/tester_a",
           "protocol": "http",
           "host": [
             "localhost"
@@ -126,7 +169,95 @@
           "path": [
             "api",
             "notes",
-            "1"
+            "19",
+            "share",
+            "tester_a"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "All Notes",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/notes",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "notes"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Note",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"title\": \"Обновленный заголовок\",\r\n  \"content\": \"Новый текст заметки\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "http://localhost:8080/api/notes/19",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "notes",
+            "19"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Delete Note",
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:8080/api/notes/19",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "notes",
+            "19"
           ]
         }
       },
@@ -136,9 +267,41 @@
       "name": "Search and Sort Notes",
       "request": {
         "method": "GET",
-        "header": [],
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
         "url": {
-          "raw": ""
+          "raw": "http://localhost:8080/api/notes?search=&sortBy=title&page=0&size=5",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "notes"
+          ],
+          "query": [
+            {
+              "key": "search",
+              "value": ""
+            },
+            {
+              "key": "sortBy",
+              "value": "title"
+            },
+            {
+              "key": "page",
+              "value": "0"
+            },
+            {
+              "key": "size",
+              "value": "5"
+            }
+          ]
         }
       },
       "response": []
@@ -147,9 +310,24 @@
       "name": "Get Stats",
       "request": {
         "method": "GET",
-        "header": [],
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
         "url": {
-          "raw": ""
+          "raw": "http://localhost:8080/api/notes/stats",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "notes",
+            "stats"
+          ]
         }
       },
       "response": []
@@ -158,12 +336,40 @@
       "name": "Get Top Users",
       "request": {
         "method": "GET",
-        "header": [],
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
         "url": {
-          "raw": ""
+          "raw": "http://localhost:8080/api/notes/stats/top?limit=3",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "notes",
+            "stats",
+            "top"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "3"
+            }
+          ]
         }
       },
       "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "token",
+      "value": ""
     }
   ]
 }
